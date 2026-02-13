@@ -111,7 +111,9 @@
       border-radius: 50%;
       background: rgba(0,0,0,0.15);
       transition: background 0.3s;
+      cursor: pointer;
     }
+    .slide-dot:hover { background: rgba(0,0,0,0.35); }
     .slide-dot.active { background: var(--yes); }
     .nav-hint {
       font-size: 14px;
@@ -380,8 +382,60 @@
       cube.addEventListener('transitionend', onEnd);
     }
 
+    function goToSlide(target) {
+      if (isAnimating || presentationDone || target === currentSlide) return;
+      if (target > currentSlide) {
+        // Set up target as the right face, then rotate forward
+        isAnimating = true;
+        slides.forEach(s => { s.classList.remove('right'); s.style.display = 'none'; });
+        slides[currentSlide].style.display = 'block';
+        slides[target].classList.add('right');
+        slides[target].style.display = 'block';
+        cube.classList.add('animate');
+        void cube.offsetHeight;
+        cube.classList.add('rotated-next');
+        function onEnd(e) {
+          if (e.propertyName !== 'transform') return;
+          cube.removeEventListener('transitionend', onEnd);
+          currentSlide = target;
+          updateDots();
+          setupFaces('next');
+          isAnimating = false;
+        }
+        cube.addEventListener('transitionend', onEnd);
+      } else {
+        // Set up target as the left face, then rotate backward
+        isAnimating = true;
+        slides.forEach(s => { s.classList.remove('left'); s.style.display = 'none'; });
+        slides[currentSlide].style.display = 'block';
+        slides[target].classList.add('left');
+        slides[target].style.display = 'block';
+        cube.classList.add('animate');
+        void cube.offsetHeight;
+        cube.classList.add('rotated-prev');
+        function onEnd(e) {
+          if (e.propertyName !== 'transform') return;
+          cube.removeEventListener('transitionend', onEnd);
+          currentSlide = target;
+          updateDots();
+          setupFaces('prev');
+          isAnimating = false;
+        }
+        cube.addEventListener('transitionend', onEnd);
+      }
+    }
+
     // Initialize first slide
     setupFaces();
+
+    // Dot click navigation
+    dotsContainer.addEventListener('click', e => {
+      const dot = e.target.closest('.slide-dot');
+      if (!dot) return;
+      e.stopPropagation();
+      const target = Array.from(dots).indexOf(dot);
+      if (target >= 0) goToSlide(target);
+    });
 
     // Click anywhere on the presentation to advance
     presentation.addEventListener('click', nextSlide);
