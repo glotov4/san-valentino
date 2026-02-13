@@ -543,13 +543,33 @@
       growYes();
     }
 
+    /* Desktop: flee on hover proximity */
     zone.addEventListener('pointermove', e => {
+      if (e.pointerType === 'touch') return;       // handled below for touch
       const b = noBtn.getBoundingClientRect();
       const d = Math.hypot(
         (b.left + b.width / 2) - e.clientX,
         (b.top + b.height / 2) - e.clientY
       );
       if (d < 140) moveNo(e.clientX, e.clientY);
+    });
+
+    /* Mobile: flee on touch-drag proximity */
+    zone.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      const b = noBtn.getBoundingClientRect();
+      const d = Math.hypot(
+        (b.left + b.width / 2) - t.clientX,
+        (b.top + b.height / 2) - t.clientY
+      );
+      if (d < 100) moveNo(t.clientX, t.clientY);
+    }, { passive: true });
+
+    /* Mobile: flee on direct tap */
+    noBtn.addEventListener('pointerdown', e => {
+      if (e.pointerType !== 'touch') return;
+      e.preventDefault();
+      moveNo(e.clientX, e.clientY);
     });
 
     noBtn.addEventListener('click', e => e.preventDefault());
