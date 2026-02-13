@@ -59,8 +59,11 @@
     .slide-cube.animate {
       transition: transform 0.9s cubic-bezier(.4, .0, .2, 1);
     }
-    .slide-cube.rotated {
+    .slide-cube.rotated-next {
       transform: translateZ(-420px) rotateY(-90deg);
+    }
+    .slide-cube.rotated-prev {
+      transform: translateZ(-420px) rotateY(90deg);
     }
 
     .slide {
@@ -80,6 +83,10 @@
     .slide.right {
       display: block;
       transform: rotateY(90deg) translateZ(420px);
+    }
+    .slide.left {
+      display: block;
+      transform: rotateY(-90deg) translateZ(420px);
     }
     .slide img {
       width: 100%;
@@ -210,13 +217,16 @@
 
     .result h2 {
       font-size: 46px;
-      margin: 10px 0;
+      margin: 10px 0 16px;
     }
 
     .fireworks {
-      width: 380px;
+      width: min(340px, 80%);
+      max-height: 340px;
+      object-fit: contain;
       margin: 0 auto;
       display: block;
+      filter: drop-shadow(0 6px 16px rgba(0,0,0,.1));
     }
 
     @keyframes pop {
@@ -298,9 +308,9 @@
     }
     const dots = document.querySelectorAll('.slide-dot');
 
-    function setupFaces() {
+    function setupFaces(direction) {
       slides.forEach(s => {
-        s.classList.remove('front', 'right');
+        s.classList.remove('front', 'right', 'left');
         s.style.display = 'none';
       });
       slides[currentSlide].classList.add('front');
@@ -309,8 +319,12 @@
         slides[currentSlide + 1].classList.add('right');
         slides[currentSlide + 1].style.display = 'block';
       }
+      if (currentSlide - 1 >= 0) {
+        slides[currentSlide - 1].classList.add('left');
+        slides[currentSlide - 1].style.display = 'block';
+      }
       // Reset cube transform without animation
-      cube.classList.remove('animate', 'rotated');
+      cube.classList.remove('animate', 'rotated-next', 'rotated-prev');
     }
 
     function updateDots() {
@@ -333,15 +347,34 @@
 
       isAnimating = true;
       cube.classList.add('animate');
-      void cube.offsetHeight; // force reflow so transition applies
-      cube.classList.add('rotated');
+      void cube.offsetHeight;
+      cube.classList.add('rotated-next');
 
       function onEnd(e) {
         if (e.propertyName !== 'transform') return;
         cube.removeEventListener('transitionend', onEnd);
         currentSlide++;
         updateDots();
-        setupFaces();
+        setupFaces('next');
+        isAnimating = false;
+      }
+      cube.addEventListener('transitionend', onEnd);
+    }
+
+    function prevSlide() {
+      if (isAnimating || presentationDone || currentSlide <= 0) return;
+
+      isAnimating = true;
+      cube.classList.add('animate');
+      void cube.offsetHeight;
+      cube.classList.add('rotated-prev');
+
+      function onEnd(e) {
+        if (e.propertyName !== 'transform') return;
+        cube.removeEventListener('transitionend', onEnd);
+        currentSlide--;
+        updateDots();
+        setupFaces('prev');
         isAnimating = false;
       }
       cube.addEventListener('transitionend', onEnd);
@@ -357,6 +390,8 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
         nextSlide();
+      } else if (e.key === 'ArrowLeft') {
+        prevSlide();
       }
     });
 
