@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Will you be my Valentine?</title>
+
+  <!-- Confetti library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      --bg1: #ffd6e7;
+      --bg2: #ffeef6;
+      --card: #ffffffcc;
+      --yes: #ff3b7a;
+      --yesHover: #ff1f68;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top, var(--bg2), var(--bg1));
+      font-family: system-ui, sans-serif;
+      overflow: hidden;
+    }
+
+    /* ==================== PRESENTATION ==================== */
+    #presentation {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      width: 100vw;
+      height: 100vh;
+      transition: opacity 0.5s ease;
+      cursor: pointer;
+    }
+    #presentation.hidden { display: none; }
+
+    .slide-stage {
+      perspective: 1200px;
+      width: 840px;
+      height: 520px;
+      position: relative;
+    }
+
+    .slide-cube {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transform: translateZ(-420px);
+    }
+    .slide-cube.animate {
+      transition: transform 0.9s cubic-bezier(.4, .0, .2, 1);
+    }
+    .slide-cube.rotated {
+      transform: translateZ(-420px) rotateY(-90deg);
+    }
+
+    .slide {
+      position: absolute;
+      width: 840px;
+      height: 520px;
+      border-radius: 6px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+      display: none;
+      backface-visibility: hidden;
+      overflow: hidden;
+    }
+    .slide.front {
+      display: block;
+      transform: rotateY(0deg) translateZ(420px);
+    }
+    .slide.right {
+      display: block;
+      transform: rotateY(90deg) translateZ(420px);
+    }
+    .slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Nav dots */
+    .slide-nav {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .slide-dots {
+      display: flex;
+      gap: 8px;
+    }
+    .slide-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.15);
+      transition: background 0.3s;
+    }
+    .slide-dot.active { background: var(--yes); }
+    .nav-hint {
+      font-size: 14px;
+      color: rgba(0,0,0,0.4);
+    }
+
+    /* ==================== VALENTINE CARD ==================== */
+    #confettiCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    #valentineSection {
+      display: none;
+      width: 100vw;
+      height: 100vh;
+    }
+    #valentineSection.visible {
+      display: grid;
+      place-items: center;
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .card {
+      width: 720px;
+      padding: 26px 22px;
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      border-radius: 22px;
+      text-align: center;
+      box-shadow: 0 18px 60px rgba(0,0,0,.15);
+    }
+
+    .art {
+      width: 260px;
+      margin: 0 auto 10px;
+      display: block;
+      filter: drop-shadow(0 10px 14px rgba(0,0,0,.12));
+    }
+
+    h1 {
+      font-size: 44px;
+      margin: 12px 0 18px;
+    }
+
+    .button-zone {
+      position: relative;
+      width: 520px;
+      height: 150px;
+      margin: 0 auto;
+      touch-action: none;
+    }
+
+    button {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 16px 24px;
+      font-size: 18px;
+      font-weight: 800;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(0,0,0,.14);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .12s ease, background .12s ease;
+    }
+
+    #yesBtn {
+      left: 18%;
+      background: var(--yes);
+      color: #fff;
+    }
+    #yesBtn:hover { background: var(--yesHover); }
+
+    #noBtn {
+      left: 62%;
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 13px;
+      opacity: .7;
+    }
+
+    .result {
+      display: none;
+      margin-top: 18px;
+      animation: pop .35s ease;
+    }
+
+    .result h2 {
+      font-size: 46px;
+      margin: 10px 0;
+    }
+
+    .fireworks {
+      width: 380px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    @keyframes pop {
+      from { transform: scale(.96); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =================== PRESENTATION =================== -->
+  <div id="presentation">
+    <div class="slide-stage">
+      <div class="slide-cube" id="slideCube">
+
+        <div class="slide" data-index="0"><img src="assets/slides/slide 1.png" alt="Slide 1"></div>
+        <div class="slide" data-index="1"><img src="assets/slides/slide 2.png" alt="Slide 2"></div>
+        <div class="slide" data-index="2"><img src="assets/slides/slide 3.png" alt="Slide 3"></div>
+        <div class="slide" data-index="3"><img src="assets/slides/slide 4.png" alt="Slide 4"></div>
+        <div class="slide" data-index="4"><img src="assets/slides/slide 5.png" alt="Slide 5"></div>
+        <div class="slide" data-index="5"><img src="assets/slides/slide 6.png" alt="Slide 6"></div>
+        <div class="slide" data-index="6"><img src="assets/slides/slide 7.png" alt="Slide 7"></div>
+
+      </div>
+    </div>
+
+    <div class="slide-nav">
+      <div class="slide-dots" id="slideDots"></div>
+      <div class="nav-hint">Click or press &rarr; to continue</div>
+    </div>
+  </div>
+
+  <!-- =================== VALENTINE SECTION =================== -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <div id="valentineSection">
+    <main class="card">
+      <img class="art" src="assets/stickers/will you be.webp" alt="Will you be my valentine?" />
+
+      <h1>Dash, will you be my valentine?</h1>
+
+      <section class="button-zone" id="zone">
+        <button id="yesBtn">Yes</button>
+        <button id="noBtn">No</button>
+      </section>
+
+      <!-- HINT -->
+      <div class="hint" id="hint">"No" seems a bit shy 😈</div>
+
+      <section class="result" id="result">
+        <h2>YAY! 🎉</h2>
+        <img
+          class="fireworks"
+          src="assets/stickers/yay.webp"
+          alt="Yay!"
+        />
+      </section>
+    </main>
+  </div>
+
+  <script>
+    /* ============ PRESENTATION LOGIC ============ */
+    const slides = document.querySelectorAll('.slide');
+    const cube = document.getElementById('slideCube');
+    const presentation = document.getElementById('presentation');
+    const valentineSection = document.getElementById('valentineSection');
+    const dotsContainer = document.getElementById('slideDots');
+    let currentSlide = 0;
+    let isAnimating = false;
+    let presentationDone = false;
+    const totalSlides = slides.length;
+
+    // Build navigation dots
+    for (let i = 0; i < totalSlides; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'slide-dot' + (i === 0 ? ' active' : '');
+      dotsContainer.appendChild(dot);
+    }
+    const dots = document.querySelectorAll('.slide-dot');
+
+    function setupFaces() {
+      slides.forEach(s => {
+        s.classList.remove('front', 'right');
+        s.style.display = 'none';
+      });
+      slides[currentSlide].classList.add('front');
+      slides[currentSlide].style.display = 'block';
+      if (currentSlide + 1 < totalSlides) {
+        slides[currentSlide + 1].classList.add('right');
+        slides[currentSlide + 1].style.display = 'block';
+      }
+      // Reset cube transform without animation
+      cube.classList.remove('animate', 'rotated');
+    }
+
+    function updateDots() {
+      dots.forEach((d, i) => d.classList.toggle('active', i === currentSlide));
+    }
+
+    function nextSlide() {
+      if (isAnimating || presentationDone) return;
+
+      // Last slide → transition to valentine card
+      if (currentSlide >= totalSlides - 1) {
+        presentationDone = true;
+        presentation.style.opacity = '0';
+        setTimeout(() => {
+          presentation.classList.add('hidden');
+          valentineSection.classList.add('visible');
+        }, 500);
+        return;
+      }
+
+      isAnimating = true;
+      cube.classList.add('animate');
+      void cube.offsetHeight; // force reflow so transition applies
+      cube.classList.add('rotated');
+
+      function onEnd(e) {
+        if (e.propertyName !== 'transform') return;
+        cube.removeEventListener('transitionend', onEnd);
+        currentSlide++;
+        updateDots();
+        setupFaces();
+        isAnimating = false;
+      }
+      cube.addEventListener('transitionend', onEnd);
+    }
+
+    // Initialize first slide
+    setupFaces();
+
+    // Click anywhere on the presentation to advance
+    presentation.addEventListener('click', nextSlide);
+
+    // Keyboard navigation
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+        nextSlide();
+      }
+    });
+
+    /* ============ CONFETTI ============ */
+    const confettiCanvas = document.getElementById('confettiCanvas');
+
+    function resizeConfettiCanvas() {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      confettiCanvas.width = Math.floor(window.innerWidth * dpr);
+      confettiCanvas.height = Math.floor(window.innerHeight * dpr);
+      confettiCanvas.style.width = '100vw';
+      confettiCanvas.style.height = '100vh';
+    }
+
+    resizeConfettiCanvas();
+    window.addEventListener('resize', resizeConfettiCanvas);
+
+    const confettiInstance = confetti.create(confettiCanvas, {
+      resize: false,
+      useWorker: true
+    });
+
+    function fullScreenConfetti() {
+      const end = Date.now() + 1600;
+      (function frame() {
+        confettiInstance({
+          particleCount: 12,
+          spread: 90,
+          startVelocity: 45,
+          ticks: 180,
+          origin: { x: Math.random(), y: Math.random() * 0.3 }
+        });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+      setTimeout(() => {
+        confettiInstance({
+          particleCount: 300,
+          spread: 140,
+          startVelocity: 60,
+          ticks: 220,
+          origin: { x: 0.5, y: 0.55 }
+        });
+      }, 300);
+    }
+
+    /* ============ YES BUTTON GROWS ============ */
+    const zone = document.getElementById('zone');
+    const yesBtn = document.getElementById('yesBtn');
+    const noBtn = document.getElementById('noBtn');
+    const result = document.getElementById('result');
+    const hint = document.getElementById('hint');
+
+    let yesScale = 1;
+    function growYes() {
+      yesScale = Math.min(2.2, yesScale + 0.1);
+      yesBtn.style.transform = `translateY(-50%) scale(${yesScale})`;
+    }
+
+    /* ============ NO BUTTON RUNS AWAY ============ */
+    function clamp(n, min, max) {
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function moveNo(px, py) {
+      const z = zone.getBoundingClientRect();
+      const b = noBtn.getBoundingClientRect();
+
+      let dx = (b.left + b.width / 2) - px;
+      let dy = (b.top + b.height / 2) - py;
+      let mag = Math.hypot(dx, dy) || 1;
+      dx /= mag;
+      dy /= mag;
+
+      let newLeft = (b.left - z.left) + dx * 150;
+      let newTop  = (b.top - z.top) + dy * 150;
+
+      newLeft = clamp(newLeft, 0, z.width - b.width);
+      newTop  = clamp(newTop, 0, z.height - b.height);
+
+      noBtn.style.left = newLeft + 'px';
+      noBtn.style.top = newTop + 'px';
+      noBtn.style.transform = 'none';
+
+      growYes();
+    }
+
+    zone.addEventListener('pointermove', e => {
+      const b = noBtn.getBoundingClientRect();
+      const d = Math.hypot(
+        (b.left + b.width / 2) - e.clientX,
+        (b.top + b.height / 2) - e.clientY
+      );
+      if (d < 140) moveNo(e.clientX, e.clientY);
+    });
+
+    noBtn.addEventListener('click', e => e.preventDefault());
+
+    /* ============ YES CLICK ============ */
+    yesBtn.addEventListener('click', () => {
+      zone.style.display = 'none';
+      hint.style.display = 'none';
+      result.style.display = 'block';
+      resizeConfettiCanvas();
+      fullScreenConfetti();
+    });
+  </script>
+</body>
+</html>
